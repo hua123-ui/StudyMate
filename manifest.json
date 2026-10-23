@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "StudyMate 学习助手",
+  "short_name": "StudyMate",
+  "description": "个人学习任务与进度管理",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f6fb",
+  "theme_color": "#5369e9",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

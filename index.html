@@ -1,0 +1,436 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyMate - 学习管理助手</title>
+    <link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#5369e9">
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background: #f4f6fb;
+            color: #20283a;
+        }
+
+        .app {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 28px 20px 50px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .brand {
+            font-size: 25px;
+            font-weight: bold;
+        }
+
+        .brand span { color: #5268e8; }
+
+        .date {
+            color: #737d91;
+            font-size: 14px;
+        }
+
+        .welcome {
+            background: #5369e9;
+            color: white;
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 22px;
+        }
+
+        .welcome h1 {
+            font-size: 27px;
+            margin: 0 0 10px;
+        }
+
+        .welcome p {
+            margin: 0;
+            line-height: 1.7;
+            color: #e8ebff;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .stat, .panel {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 3px 15px #25365c08;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #7b8497;
+        }
+
+        .stat-number {
+            font-size: 29px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .unit {
+            font-size: 14px;
+            font-weight: normal;
+            color: #7b8497;
+        }
+
+        .panel h2 {
+            font-size: 19px;
+            margin: 0 0 18px;
+        }
+
+        .add-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input, select, button {
+            font: inherit;
+            border-radius: 10px;
+        }
+
+        input, select {
+            min-width: 0;
+            padding: 12px;
+            border: 1px solid #dce1ed;
+            background: white;
+            outline-color: #5369e9;
+        }
+
+        #taskName { flex: 1; }
+
+        button {
+            border: none;
+            cursor: pointer;
+            padding: 12px 17px;
+            background: #5369e9;
+            color: white;
+            font-weight: 600;
+        }
+
+        button:hover { opacity: 0.9; }
+
+        .task {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 0;
+            border-bottom: 1px solid #edf0f6;
+        }
+
+        .task:last-child { border-bottom: none; }
+
+        .task input[type="checkbox"] {
+            width: 19px;
+            height: 19px;
+            accent-color: #5369e9;
+            flex-shrink: 0;
+        }
+
+        .task-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .task-title {
+            overflow-wrap: anywhere;
+            font-size: 15px;
+        }
+
+        .task-category {
+            display: inline-block;
+            margin-top: 6px;
+            color: #6878dc;
+            background: #eef0ff;
+            border-radius: 6px;
+            padding: 3px 7px;
+            font-size: 12px;
+        }
+
+        .completed .task-title {
+            color: #9ba2b1;
+            text-decoration: line-through;
+        }
+
+        .delete-btn {
+            background: #fff0f0;
+            color: #d64c4c;
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+
+        .empty {
+            text-align: center;
+            color: #929aab;
+            padding: 30px 0;
+        }
+
+        .progress-track {
+            height: 10px;
+            background: #edf0f8;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        #progressBar {
+            height: 100%;
+            width: 0;
+            background: #5369e9;
+            transition: width 0.2s;
+        }
+
+        .progress-text {
+            color: #778196;
+            font-size: 13px;
+            margin-top: 9px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #9aa2b2;
+            font-size: 12px;
+            margin-top: 22px;
+        }
+
+        @media (max-width: 600px) {
+            .app { padding: 20px 14px 35px; }
+            header { align-items: flex-start; }
+            .brand { font-size: 22px; }
+            .welcome { padding: 22px; }
+            .welcome h1 { font-size: 23px; }
+            .stats { gap: 8px; }
+            .stat { padding: 13px 10px; }
+            .stat-number { font-size: 23px; }
+            .stat-label { font-size: 12px; }
+            .add-form { flex-wrap: wrap; }
+            #taskName { flex-basis: 100%; }
+            #taskCategory { flex: 1; }
+            .panel { padding: 16px; }
+            .task { gap: 9px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <header>
+        <div class="brand">Study<span>Mate</span></div>
+        <div class="date" id="todayDate"></div>
+    </header>
+
+    <section class="welcome">
+        <h1>把今天的目标，一步步完成。</h1>
+        <p>安排学习任务，记录每一次进步。</p>
+    </section>
+
+    <section class="stats">
+        <div class="stat">
+            <div class="stat-label">今日任务</div>
+            <div class="stat-number" id="totalCount">0</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">已完成</div>
+            <div class="stat-number" id="doneCount">0</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">完成率</div>
+            <div class="stat-number"><span id="rate">0</span><span class="unit">%</span></div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>添加学习任务</h2>
+        <form class="add-form" id="taskForm">
+            <input id="taskName" type="text"
+                   placeholder="例如：完成英语听力练习" maxlength="100" required>
+            <select id="taskCategory" aria-label="任务分类">
+                <option value="英语学习">英语学习</option>
+                <option value="编程学习">编程学习</option>
+                <option value="专业课程">专业课程</option>
+                <option value="其他">其他</option>
+            </select>
+            <button type="submit">+ 添加任务</button>
+        </form>
+
+        <h2>今日任务清单</h2>
+        <div id="taskList"></div>
+
+        <div style="margin-top:22px">
+            <strong>今日学习进度</strong>
+            <div class="progress-track">
+                <div id="progressBar"></div>
+            </div>
+            <div class="progress-text" id="progressText">
+                开始行动，完成今天的第一个目标吧！
+            </div>
+        </div>
+    </section>
+
+    <div class="footer">
+        StudyMate · 让每一天的努力都看得见
+    </div>
+</div>
+
+<script>
+    const STORAGE_KEY = "studymate_tasks_v1";
+    let tasks = [];
+
+    // 读取本机保存的任务
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        tasks = saved ? JSON.parse(saved) : [];
+        if (!Array.isArray(tasks)) tasks = [];
+    } catch (error) {
+        tasks = [];
+    }
+
+    // 显示今天的日期
+    document.getElementById("todayDate").textContent =
+        new Date().toLocaleDateString("zh-CN", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            weekday: "long"
+        });
+
+    // 保存到当前设备
+    function saveTasks() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    // 创建任务
+    document.getElementById("taskForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        const input = document.getElementById("taskName");
+        const category = document.getElementById("taskCategory");
+        const name = input.value.trim();
+
+        if (!name) return;
+
+        tasks.push({
+            id: Date.now().toString() + Math.random().toString(16).slice(2),
+            name: name,
+            category: category.value,
+            completed: false
+        });
+
+        saveTasks();
+        input.value = "";
+        renderTasks();
+        input.focus();
+    });
+
+    // 切换完成状态
+    function toggleTask(id, checked) {
+        const task = tasks.find(item => item.id === id);
+        if (task) {
+            task.completed = checked;
+            saveTasks();
+            renderTasks();
+        }
+    }
+
+    // 删除任务
+    function deleteTask(id) {
+        tasks = tasks.filter(item => item.id !== id);
+        saveTasks();
+        renderTasks();
+    }
+
+    // 更新任务列表和统计数据
+    function renderTasks() {
+        const list = document.getElementById("taskList");
+        list.replaceChildren();
+
+        if (tasks.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "empty";
+            empty.textContent = "还没有任务，添加一个开始吧。";
+            list.appendChild(empty);
+        }
+
+        tasks.forEach(task => {
+            const row = document.createElement("div");
+            row.className = "task" + (task.completed ? " completed" : "");
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = task.completed;
+            checkbox.setAttribute("aria-label", "完成 " + task.name);
+            checkbox.addEventListener("change", () => {
+                toggleTask(task.id, checkbox.checked);
+            });
+
+            const info = document.createElement("div");
+            info.className = "task-info";
+
+            const title = document.createElement("div");
+            title.className = "task-title";
+            title.textContent = task.name;
+
+            const category = document.createElement("span");
+            category.className = "task-category";
+            category.textContent = task.category;
+
+            info.append(title, category);
+
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "delete-btn";
+            remove.textContent = "删除";
+            remove.addEventListener("click", () => deleteTask(task.id));
+
+            row.append(checkbox, info, remove);
+            list.appendChild(row);
+        });
+
+        const total = tasks.length;
+        const done = tasks.filter(task => task.completed).length;
+        const rate = total === 0 ? 0 : Math.round(done / total * 100);
+
+        document.getElementById("totalCount").textContent = total;
+        document.getElementById("doneCount").textContent = done;
+        document.getElementById("rate").textContent = rate;
+        document.getElementById("progressBar").style.width = rate + "%";
+
+        document.getElementById("progressText").textContent =
+            total === 0 ? "开始行动，完成今天的第一个目标吧！"
+            : done === total ? "太棒了！今天的任务全部完成。"
+            : `已完成 ${done} / ${total} 项，继续加油！`;
+    }
+
+    renderTasks();
+</script>
+<script>
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("./sw.js")
+                .catch(error => {
+                    console.error("应用缓存注册失败：", error);
+                });
+        });
+    }
+</script>
+</body>
+</html>
