@@ -707,14 +707,18 @@
     let backupDirectoryHandle = null;
 
     chooseFolderButton.addEventListener("click", async function () {
-        if (!("showDirectoryPicker" in window)) {
+          if (!("showDirectoryPicker" in window)) {
             storageLocationText.textContent =
-                "当前方式：浏览器默认下载目录";
-
+                "当前方式：浏览器默认下载";
+        
             storageHelp.textContent =
-                "当前浏览器不支持网页直接选择保存文件夹，备份仍可通过浏览器下载。";
-
-            alert("当前浏览器暂不支持直接选择保存文件夹，将继续使用默认下载方式。");
+                "当前浏览器不支持直接选择文件夹。导出的备份将通过浏览器下载，请在手机的下载目录中查找。";
+        
+            alert(
+                "当前浏览器不支持直接选择保存文件夹。" +
+                "\n请使用浏览器下载功能保存备份。"
+            );
+        
             return;
         }
 
