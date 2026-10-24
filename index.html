@@ -194,6 +194,36 @@
             color: #5369e9;
         }
 
+
+        /* 备份保存位置设置 */
+        .storage-settings {
+            margin-top: 18px;
+            padding: 16px;
+            background: #f7f8fc;
+            border-radius: 12px;
+        }
+
+        .storage-settings h3 {
+            margin: 0 0 10px;
+            font-size: 16px;
+        }
+
+        .storage-settings p {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #666;
+        }
+
+        .storage-settings button {
+            width: 100%;
+        }
+
+        .storage-help {
+            margin-bottom: 0;
+        }
+
+
+
         .restore-btn {
             flex: 1;
             min-width: 120px;
@@ -325,10 +355,32 @@
             导入数据恢复
         </button>
 
+        <button type="button" class="backup-btn"
+            id="openHistory">
+            查看备份记录
+        </button>
+
         <input type="file" id="backupFile"
                accept=".json,application/json">
     </div>
+    <!-- 备份保存位置设置 -->
+    <div class="storage-settings">
+        <h3>备份保存位置</h3>
 
+        <p id="storageLocationText">
+            当前方式：浏览器默认下载目录
+        </p>
+
+        <button type="button"
+                id="chooseStorageFolder"
+                class="backup-btn">
+            选择保存文件夹
+        </button>
+
+        <p id="storageHelp" class="storage-help">
+            如果浏览器不支持选择文件夹，将继续使用默认下载方式。
+        </p>
+    </div>
 
 
     <div class="footer">
@@ -466,8 +518,40 @@
     }
 
 
+    // StudyMate 备份记录存储键
+    const BACKUP_HISTORY_KEY = "studymate_backup_history_v1";
+
+    // 打开备份下载记录页面
+    document.getElementById("openHistory").addEventListener("click", function () {
+        window.location.href = "./history.html";
+    });
+
+    // 保存一条备份记录
+    function saveBackupHistory(fileName, method, status) {
+        try {
+            const saved = localStorage.getItem(BACKUP_HISTORY_KEY);
+            const history = saved ? JSON.parse(saved) : [];
+
+            history.push({
+                fileName: fileName,
+                time: new Date().toISOString(),
+                method: method,
+                status: status
+            });
+
+            // 只保留最近 100 条记录
+            const recentHistory = history.slice(-100);
+
+            localStorage.setItem(
+                BACKUP_HISTORY_KEY,
+                JSON.stringify(recentHistory)
+            );
+        } catch (error) {
+            console.error("保存备份记录失败：", error);
+        }
+    }
     // 导出学习任务备份
-    document.getElementById("exportBackup").addEventListener("click", function () {
+    document.getElementById("exportBackup").addEventListener("click", async function () {
         const backup = {
             app: "StudyMate",
             version: 1,
@@ -480,19 +564,75 @@
             type: "application/json;charset=utf-8"
         });
 
+        const date = new Date().toISOString().slice(0, 10);
+        const fileName = `StudyMate-备份-${date}.json`;
+
+        // 优先保存到用户选择的文件夹
+        if (backupDirectoryHandle) {
+            try {
+                // 检查浏览器是否仍然允许写入
+                const permission = await backupDirectoryHandle.queryPermission({
+                    mode: "readwrite"
+                });
+
+                let granted = permission === "granted";
+
+                if (!granted) {
+                    const requested = await backupDirectoryHandle.requestPermission({
+                        mode: "readwrite"
+                    });
+                    granted = requested === "granted";
+                }
+
+                if (granted) {
+                    const fileHandle = await backupDirectoryHandle.getFileHandle(
+                        fileName,
+                        { create: true }
+                    );
+
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+
+                    // 记录成功保存的备份
+                    saveBackupHistory(
+                        fileName,
+                        "选择的文件夹：" + backupDirectoryHandle.name,
+                        "已保存"
+                    );
+
+                    alert("备份已保存到所选文件夹：" + fileName);
+                    return;
+                }
+            } catch (error) {
+                console.error("保存到所选文件夹失败：", error);
+                alert("无法写入所选文件夹，将尝试使用浏览器下载。");
+            }
+        }
+
+        // 未选择文件夹或无法写入时，使用原来的下载方式
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        const date = new Date().toISOString().slice(0, 10);
 
         link.href = url;
-        link.download = `StudyMate-备份-${date}.json`;
+        link.download = fileName;
         document.body.appendChild(link);
         link.click();
         link.remove();
-        URL.revokeObjectURL(url);
 
-        alert("备份文件已生成，请检查手机或电脑的下载文件夹。");
+        // 记录已发起的浏览器下载
+        saveBackupHistory(
+            fileName,
+            "浏览器默认下载",
+            "已发起下载"
+        );
+
+        // 延迟释放下载地址，兼容部分浏览器
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+        alert("已发起备份下载，请检查浏览器的下载记录或下载文件夹。");
     });
+
 
     // 点击导入按钮，选择备份文件
     document.getElementById("importBackup").addEventListener("click", function () {
@@ -559,7 +699,42 @@
             event.target.value = "";
         }
     });
+    // 保存位置设置
+    const chooseFolderButton = document.getElementById("chooseStorageFolder");
+    const storageLocationText = document.getElementById("storageLocationText");
+    const storageHelp = document.getElementById("storageHelp");
 
+    let backupDirectoryHandle = null;
+
+    chooseFolderButton.addEventListener("click", async function () {
+        if (!("showDirectoryPicker" in window)) {
+            storageLocationText.textContent =
+                "当前方式：浏览器默认下载目录";
+
+            storageHelp.textContent =
+                "当前浏览器不支持网页直接选择保存文件夹，备份仍可通过浏览器下载。";
+
+            alert("当前浏览器暂不支持直接选择保存文件夹，将继续使用默认下载方式。");
+            return;
+        }
+
+        try {
+            backupDirectoryHandle = await window.showDirectoryPicker({
+                mode: "readwrite"
+            });
+
+            storageLocationText.textContent =
+                "当前选择：" + backupDirectoryHandle.name;
+
+            storageHelp.textContent =
+                "已选择文件夹。下一步将把备份导出功能连接到这个位置。";
+
+        } catch (error) {
+            if (error.name !== "AbortError") {
+                alert("选择文件夹失败，请继续使用浏览器默认下载方式。");
+            }
+        }
+    });
 
 
     renderTasks();
