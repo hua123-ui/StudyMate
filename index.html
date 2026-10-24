@@ -179,6 +179,33 @@
             font-size: 13px;
         }
 
+
+        .backup-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 22px;
+        }
+
+        .backup-btn {
+            flex: 1;
+            min-width: 120px;
+            background: #eef0ff;
+            color: #5369e9;
+        }
+
+        .restore-btn {
+            flex: 1;
+            min-width: 120px;
+            background: #e9f7ef;
+            color: #218653;
+        }
+
+        #backupFile {
+            display: none;
+        }
+
+
         .empty {
             text-align: center;
             color: #929aab;
@@ -285,6 +312,24 @@
             </div>
         </div>
     </section>
+
+
+    <div class="backup-actions">
+        <button type="button" class="backup-btn"
+                id="exportBackup">
+            导出数据备份
+        </button>
+
+        <button type="button" class="restore-btn"
+                id="importBackup">
+            导入数据恢复
+        </button>
+
+        <input type="file" id="backupFile"
+               accept=".json,application/json">
+    </div>
+
+
 
     <div class="footer">
         StudyMate · 让每一天的努力都看得见
@@ -419,6 +464,103 @@
             : done === total ? "太棒了！今天的任务全部完成。"
             : `已完成 ${done} / ${total} 项，继续加油！`;
     }
+
+
+    // 导出学习任务备份
+    document.getElementById("exportBackup").addEventListener("click", function () {
+        const backup = {
+            app: "StudyMate",
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            tasks: tasks
+        };
+
+        const content = JSON.stringify(backup, null, 2);
+        const blob = new Blob([content], {
+            type: "application/json;charset=utf-8"
+        });
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const date = new Date().toISOString().slice(0, 10);
+
+        link.href = url;
+        link.download = `StudyMate-备份-${date}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+
+        alert("备份文件已生成，请检查手机或电脑的下载文件夹。");
+    });
+
+    // 点击导入按钮，选择备份文件
+    document.getElementById("importBackup").addEventListener("click", function () {
+        document.getElementById("backupFile").click();
+    });
+
+    // 读取并恢复备份
+    document.getElementById("backupFile").addEventListener("change", async function (event) {
+        const file = event.target.files[0];
+
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const backup = JSON.parse(text);
+
+            // 同时兼容直接导出的任务数组和本功能生成的备份文件
+            const importedTasks = Array.isArray(backup)
+                ? backup
+                : backup && backup.app === "StudyMate" &&
+                  backup.version === 1
+                    ? backup.tasks
+                    : null;
+
+            if (!Array.isArray(importedTasks)) {
+                throw new Error("备份文件格式不正确");
+            }
+
+            // 检查每一条任务是否包含必要字段
+            const valid = importedTasks.every(task =>
+                task &&
+                typeof task.id === "string" &&
+                typeof task.name === "string" &&
+                typeof task.category === "string" &&
+                typeof task.completed === "boolean"
+            );
+
+            if (!valid) {
+                throw new Error("任务数据不完整或格式不正确");
+            }
+
+            const confirmed = confirm(
+                `备份中有 ${importedTasks.length} 项任务。\n` +
+                "恢复后，当前任务列表将被备份内容替换。\n" +
+                "建议先导出当前数据，再继续恢复。\n\n确定要恢复吗？"
+            );
+
+            if (!confirmed) return;
+
+            // 先保存新数据，成功后再更新页面
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify(importedTasks)
+            );
+
+            tasks = importedTasks;
+            renderTasks();
+
+            alert("恢复成功！学习任务已经更新。");
+        } catch (error) {
+            alert("恢复失败：" + error.message);
+        } finally {
+            // 允许再次选择同一个文件
+            event.target.value = "";
+        }
+    });
+
+
 
     renderTasks();
 </script>
