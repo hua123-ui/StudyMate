@@ -1,0 +1,239 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyMate - 备份记录</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f4f6fc;
+            color: #26324b;
+            font-family: Arial, "Microsoft YaHei", sans-serif;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .back-btn {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            background: #e8ebff;
+            color: #5369e9;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 23px;
+        }
+
+        .subtitle {
+            color: #7c879d;
+            font-size: 13px;
+            margin-top: 7px;
+        }
+
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px;
+            background: white;
+            border-radius: 14px;
+            margin-bottom: 18px;
+            box-shadow: 0 4px 15px rgba(30, 50, 90, 0.04);
+        }
+
+        .summary-label {
+            color: #7c879d;
+            font-size: 14px;
+        }
+
+        .summary-number {
+            color: #5369e9;
+            font-size: 27px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .record-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .record {
+            background: white;
+            border-radius: 14px;
+            padding: 17px;
+            box-shadow: 0 4px 15px rgba(30, 50, 90, 0.04);
+        }
+
+        .record-name {
+            font-size: 15px;
+            font-weight: bold;
+            overflow-wrap: anywhere;
+        }
+
+        .record-detail {
+            color: #7c879d;
+            font-size: 13px;
+            line-height: 1.8;
+            margin-top: 8px;
+        }
+
+        .empty {
+            padding: 42px 20px;
+            text-align: center;
+            background: white;
+            border-radius: 14px;
+            color: #8993a7;
+            line-height: 1.8;
+        }
+
+        .clear-btn {
+            margin-top: 18px;
+            padding: 12px;
+            width: 100%;
+            border: none;
+            border-radius: 10px;
+            background: #fff0f0;
+            color: #d9535f;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 420px) {
+            body {
+                padding: 14px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" id="backButton">← 返回</button>
+            <div>
+                <h1>备份下载记录</h1>
+                <div class="subtitle">仅显示 StudyMate 自己生成的备份记录</div>
+            </div>
+        </div>
+
+        <div class="summary">
+            <div>
+                <div class="summary-label">备份记录总数</div>
+                <div class="summary-number" id="recordCount">0</div>
+            </div>
+            <div>📁 StudyMate</div>
+        </div>
+
+        <div class="record-list" id="recordList">
+            <div class="empty">正在读取记录……</div>
+        </div>
+
+        <button class="clear-btn" id="clearRecords">
+            清空记录
+        </button>
+    </div>
+
+    <script>
+        const HISTORY_KEY = "studymate_backup_history_v1";
+
+        function loadHistory() {
+            try {
+                const saved = localStorage.getItem(HISTORY_KEY);
+                const records = saved ? JSON.parse(saved) : [];
+                return Array.isArray(records) ? records : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function renderHistory() {
+            const records = loadHistory();
+            const recordList = document.getElementById("recordList");
+
+            document.getElementById("recordCount").textContent =
+                records.length;
+
+            recordList.replaceChildren();
+
+            if (records.length === 0) {
+                const empty = document.createElement("div");
+                empty.className = "empty";
+                empty.textContent =
+                    "还没有备份记录。完成一次备份后，记录会显示在这里。";
+                recordList.appendChild(empty);
+                return;
+            }
+
+            records.slice().reverse().forEach(record => {
+                const card = document.createElement("div");
+                card.className = "record";
+
+                const name = document.createElement("div");
+                name.className = "record-name";
+                name.textContent = record.fileName || "StudyMate 备份文件";
+
+                const detail = document.createElement("div");
+                detail.className = "record-detail";
+
+                const date = record.time
+                    ? new Date(record.time).toLocaleString()
+                    : "时间未知";
+
+                detail.textContent =
+                    "生成时间：" + date +
+                    "\n保存方式：" + (record.method || "浏览器下载") +
+                    "\n状态：" + (record.status || "已发起下载");
+
+                detail.style.whiteSpace = "pre-line";
+
+                card.appendChild(name);
+                card.appendChild(detail);
+                recordList.appendChild(card);
+            });
+        }
+
+        document.getElementById("backButton").addEventListener("click", () => {
+            window.location.href = "./index.html";
+        });
+
+        document.getElementById("clearRecords").addEventListener("click", () => {
+            if (!confirm("确定清空 StudyMate 的备份记录吗？实际备份文件不会被删除。")) {
+                return;
+            }
+
+            localStorage.removeItem(HISTORY_KEY);
+            renderHistory();
+        });
+
+        renderHistory();
+    </script>
+</body>
+</html>
